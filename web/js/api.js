@@ -1319,14 +1319,35 @@
     },
 
     /* ------------------------------------------------- OpenRouter (real TTS)
-       POST {root}/audio/speech, OpenAI Audio Speech shape. Preset voices
-       only — the endpoint takes no style/instruction field, so unlike the
-       other three providers there is no ttsStyleFor() layering here; the
-       voice identity comes entirely from the `voice` id itself. */
+       POST {root}/audio/speech, OpenAI Audio Speech shape. No style/
+       instruction field on this endpoint, so unlike the other three
+       providers there is no ttsStyleFor() layering here.
+       `mode` here is the TALK mode (chat/story/…) like the other _*Speak
+       functions take — unused, kept only for a consistent signature.
+       `tts.mode` (the separate voice-mode setting: clone/preset/off) is
+       what actually branches this function. */
     _openrouterSpeak: function (text, lang, mode) {
       var tts = Config.section('tts');
       if (!tts.openrouterApiKey) return Promise.reject(new Error('NO_KEY'));
-      var model = String(tts.openrouterModel || 'openai/gpt-4o-mini-tts').trim() ||
+      if (tts.mode === 'clone') {
+        var cloneModel = String(tts.openrouterModelClone || 'fish-audio/s2.1-pro').trim() ||
+                          'fish-audio/s2.1-pro';
+        return Api._fetchAsDataUrl(tts.reference).then(function (dataUrl) {
+          var body = {
+            model: cloneModel,
+            input: text,
+            /* Stateless voice cloning: the reference sample IS the voice —
+               no preset `voice` id is sent alongside it. */
+            input_references: [
+              { type: 'input_audio', input_audio: { data: dataUrl } }
+            ],
+            response_format: 'mp3'
+          };
+          return requestAudio(localProxy(openrouterTtsUrl(tts.openrouterBaseUrl)), body,
+                               tts.openrouterApiKey, 180000);
+        });
+      }
+      var model = String(tts.openrouterModelPreset || 'openai/gpt-4o-mini-tts').trim() ||
                   'openai/gpt-4o-mini-tts';
       var voice = String(tts.openrouterVoice || 'alloy').trim() || 'alloy';
       var body = {

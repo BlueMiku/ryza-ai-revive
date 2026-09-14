@@ -2157,18 +2157,30 @@
           { hint: T('settings.openrouterBaseHint') });
         App._field(w, T('settings.apiKey'), Config.section('tts').openrouterApiKey,
           function (v) { Config.set('tts.openrouterApiKey', v); }, { password: true });
-        App._field(w, T('settings.openrouterModel'), Config.section('tts').openrouterModel,
-          function (v) { Config.set('tts.openrouterModel', v); },
-          { hint: T('settings.openrouterModel.hint'),
-            suggestions: Api.OPENROUTER_TTS_MODELS || [], list: 'openrouter-model-list' });
-        App._field(w, T('settings.openrouterVoice'), Config.section('tts').openrouterVoice,
-          function (v) { Config.set('tts.openrouterVoice', v); },
-          { hint: T('settings.openrouterVoice.hint'),
-            suggestions: Api.OPENROUTER_TTS_VOICES || [], list: 'openrouter-voice-list' });
-        App._select(w, T('settings.ttsMode'), Config.section('tts').mode === 'off' ? 'off' : 'preset', [
+        App._select(w, T('settings.ttsMode'),
+          Config.section('tts').mode === 'off' ? 'off'
+            : Config.section('tts').mode === 'clone' ? 'clone' : 'preset', [
+          { v: 'clone', t: T('settings.ttsMode.clone') },
           { v: 'preset', t: T('settings.ttsMode.preset') },
           { v: 'off', t: T('settings.ttsMode.off') }
         ], function (v) { Config.set('tts.mode', v); App.buildSettings(); });
+        if (Config.section('tts').mode === 'clone') {
+          App._field(w, T('settings.model'), Config.section('tts').openrouterModelClone,
+            function (v) { Config.set('tts.openrouterModelClone', v); },
+            { hint: T('settings.openrouterModelClone.hint') });
+          App._field(w, T('settings.refAudio'), Config.section('tts').reference,
+            function (v) { Config.set('tts.reference', v); },
+            { hint: T('settings.refAudio.hint') });
+        } else if (Config.section('tts').mode !== 'off') {
+          App._field(w, T('settings.openrouterModel'), Config.section('tts').openrouterModelPreset,
+            function (v) { Config.set('tts.openrouterModelPreset', v); },
+            { hint: T('settings.openrouterModel.hint'),
+              suggestions: Api.OPENROUTER_TTS_MODELS || [], list: 'openrouter-model-list' });
+          App._field(w, T('settings.openrouterVoice'), Config.section('tts').openrouterVoice,
+            function (v) { Config.set('tts.openrouterVoice', v); },
+            { hint: T('settings.openrouterVoice.hint'),
+              suggestions: Api.OPENROUTER_TTS_VOICES || [], list: 'openrouter-voice-list' });
+        }
       } else {
       App._field(w, T('settings.baseUrl'), Config.section('tts').baseUrl,
         function (v) { Config.set('tts.baseUrl', v); });
@@ -2397,7 +2409,9 @@
       if (!key) { App.toast(I18n.t('toast.needKey'), true); return; }
       var model = tts.provider === 'qwen' ? (tts.qwenModel || 'qwen3-tts-flash')
                 : tts.provider === 'fish' ? (tts.fishModel || 'fishaudio-s21pro-flash')
-                : tts.provider === 'openrouter' ? (tts.openrouterModel || 'openai/gpt-4o-mini-tts')
+                : tts.provider === 'openrouter' ? (tts.mode === 'clone'
+                    ? (tts.openrouterModelClone || 'fish-audio/s2.1-pro')
+                    : (tts.openrouterModelPreset || 'openai/gpt-4o-mini-tts'))
                 : (tts.mode === 'clone' ? tts.modelClone : tts.modelPreset);
       if (tts.provider !== 'fish' && tts.provider !== 'openrouter' && Api.isPlaceholderModel(model)) {
         App.toast(I18n.t('toast.needModel'), true); return;

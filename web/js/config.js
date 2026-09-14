@@ -83,7 +83,12 @@
          the public OpenRouter API host. */
       openrouterBaseUrl: '',
       openrouterApiKey: '',
-      openrouterModel: 'openai/gpt-4o-mini-tts',
+      /* clone mode reuses the shared `reference` wav above (same file the
+         'openai' provider clones from) — one physical sample, several
+         providers. Only some OpenRouter models can clone; fish-audio/s2.1-pro
+         is the one their docs name explicitly. */
+      openrouterModelClone: 'fish-audio/s2.1-pro',
+      openrouterModelPreset: 'openai/gpt-4o-mini-tts',
       openrouterVoice: 'alloy',
       lang: 'auto'                   // 朗读语言（auto=与 llm.lang 实际值一致）
     },
