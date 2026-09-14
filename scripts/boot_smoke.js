@@ -201,11 +201,17 @@ for (const f of ['util.js', 'config.js', 'i18n.js', 'api.js', 'memory.js',
     sandbox.Nsfw.onTurn(nsfwTag);
     ok(!sandbox.Nsfw.active(), 'disabled setting blocks llm nsfw:on');
     sandbox.Nsfw.setEnabled(true);
-    ok(sandbox.Nsfw.active(), 'settings toggle enables nsfw');
+    ok(!sandbox.Nsfw.active(), 'granting permission alone does not undress her');
+    sandbox.Nsfw.onTurn(nsfwTag);
+    ok(sandbox.Nsfw.active(), 'llm can undress once permission is granted');
     ok(/肌が見えている/.test(sandbox.Nsfw.screenFact()),
        'prompt tells the LLM she is undressed');
     sandbox.Nsfw.setEnabled(false);
-    ok(!sandbox.Nsfw.active(), 'settings toggle dresses and blocks nsfw');
+    ok(!sandbox.Nsfw.active(), 'revoking permission dresses her back immediately');
+    sandbox.Nsfw.setEnabled(true);
+    sandbox.Nsfw.onTurn(nsfwTag);
+    ok(sandbox.Nsfw.active(), 're-granting permission lets the llm undress her again');
+    sandbox.Nsfw.setEnabled(false);
     sandbox.Nsfw.onTurn(nsfwTag);
     ok(!sandbox.Nsfw.active(), 'disabled setting continues blocking llm nsfw:on');
     sandbox.Nsfw.reset();

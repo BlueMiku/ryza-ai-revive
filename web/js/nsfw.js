@@ -37,10 +37,15 @@
        under the in-memory flag. */
     restore: function () {
       Nsfw._enabled = configuredEnabled();
-      apply(Nsfw._enabled);
+      /* Re-assert the CURRENT on/off state under the (possibly new)
+         permission — granting permission must not itself undress her;
+         only a live LLM turn does that. Revoking permission still forces
+         off, since apply() re-guards against _enabled either way. */
+      apply(Nsfw._on);
     },
     /* Settings-screen toggle: persists and immediately re-applies the gate
-       (turning it off also dresses her back, even mid-scene). */
+       (turning it off dresses her back, even mid-scene; turning it on
+       grants permission only — she stays as she was until the LLM acts). */
     setEnabled: function (on) {
       Nsfw._enabled = !!on;
       try {
@@ -48,7 +53,7 @@
           Config.set('app.nsfwEnabled', Nsfw._enabled);
         }
       } catch (e) {}
-      apply(Nsfw._enabled);
+      apply(Nsfw._on);
     },
     reset: function () { apply(false); },
     /* One fact for the system prompt. Not a rule list. */
