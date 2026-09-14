@@ -76,6 +76,15 @@
       fishApiKey: '',
       fishModel: 'fishaudio-s21pro-flash',
       fishVoice: '',
+      /* openrouter-specific — endpoint + key SEPARATE from openai/qwen/fish.
+         Real TTS API (POST /api/v1/audio/speech, OpenAI Audio Speech shape,
+         raw audio bytes back) — NOT the chat/completions+audio pattern the
+         'openai' provider above uses. Empty openrouterBaseUrl falls back to
+         the public OpenRouter API host. */
+      openrouterBaseUrl: '',
+      openrouterApiKey: '',
+      openrouterModel: 'openai/gpt-4o-mini-tts',
+      openrouterVoice: 'alloy',
       lang: 'auto'                   // 朗读语言（auto=与 llm.lang 实际值一致）
     },
 

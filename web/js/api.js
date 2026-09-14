@@ -588,6 +588,35 @@
     return fishApiRoot(baseUrl) + '/speech/tts';
   }
 
+  /* OpenRouter's real TTS API: POST {root}/audio/speech, OpenAI Audio
+     Speech shape (model/input/voice/response_format), raw audio bytes
+     back — a different endpoint and body shape than the 'openai' provider
+     above (which is the chat/completions+audio, MiMo/gpt-4o-audio-preview
+     pattern). Model catalog changes often; these are just seed
+     suggestions, any id can be typed. */
+  var OPENROUTER_DEFAULT_BASE = 'https://openrouter.ai/api/v1';
+  var OPENROUTER_TTS_MODELS = [
+    'openai/gpt-4o-mini-tts',
+    'mistralai/voxtral-mini-tts',
+    'microsoft/mai-voice-2',
+    'fish-audio/s2.1-pro'
+  ];
+  var OPENROUTER_TTS_VOICES = ['alloy', 'nova', 'echo', 'shimmer'];
+
+  function openrouterApiRoot(baseUrl) {
+    var s = String(baseUrl || '').trim();
+    if (!s) return OPENROUTER_DEFAULT_BASE;
+    s = s.replace(/\/+$/, '');
+    s = s.replace(/\/audio\/speech$/i, '');
+    s = s.replace(/\/chat\/completions$/i, '');
+    if (/^https?:\/\/openrouter\.ai$/i.test(s)) return OPENROUTER_DEFAULT_BASE;
+    return s;
+  }
+
+  function openrouterTtsUrl(baseUrl) {
+    return openrouterApiRoot(baseUrl) + '/audio/speech';
+  }
+
   function fishLanguage(lg) {
     var map = {
       ja: 'ja', zh: 'zh', 'zh-tw': 'zh-TW', en: 'en',
@@ -1000,6 +1029,11 @@
     _fishTtsUrl: fishTtsUrl,
     _fishLanguage: fishLanguage,
     _fishSampleUrls: fishSampleUrls,
+    OPENROUTER_DEFAULT_BASE: OPENROUTER_DEFAULT_BASE,
+    OPENROUTER_TTS_MODELS: OPENROUTER_TTS_MODELS,
+    OPENROUTER_TTS_VOICES: OPENROUTER_TTS_VOICES,
+    _openrouterApiRoot: openrouterApiRoot,
+    _openrouterTtsUrl: openrouterTtsUrl,
     /* resolved per-mode TTS voice direction (base hint + mode layer) */
     ttsStyleFor: function (mode) { return ttsStyleFor(mode, Config.section('tts')); },
 
@@ -1139,8 +1173,10 @@
     /* ------------------------------------------------------------- TTS */
     /* Resolves to a Blob URL. Returns null when voice is disabled.
        provider: 'openai' (chat/completions + audio, MiMo-style),
-       'qwen' (DashScope-compatible TTS), or 'fish' (Fish Audio Open API
-       POST /speech/tts, binary audio). `mode` is the talk mode. */
+       'qwen' (DashScope-compatible TTS), 'fish' (Fish Audio Open API
+       POST /speech/tts, binary audio), or 'openrouter' (real TTS API,
+       POST /audio/speech, OpenAI Audio Speech shape, binary audio).
+       `mode` is the talk mode. */
     speak: function (text, lang, mode) {
       var tts = Config.section('tts');
       if (tts.mode === 'off') return Promise.resolve(null);
@@ -1149,6 +1185,7 @@
          setup can never leak into a DashScope call (or back). */
       if ((tts.provider || 'openai') === 'qwen') return Api._qwenSpeak(text, lang, mode);
       if (tts.provider === 'fish') return Api._fishSpeak(text, lang, mode);
+      if (tts.provider === 'openrouter') return Api._openrouterSpeak(text, lang, mode);
       if (!tts.apiKey) return Promise.reject(new Error('NO_KEY'));
 
       var audio = { format: tts.format || 'wav' };
@@ -1279,6 +1316,27 @@
         throw err;
       });
       return _fishCloneWait.then(synth);
+    },
+
+    /* ------------------------------------------------- OpenRouter (real TTS)
+       POST {root}/audio/speech, OpenAI Audio Speech shape. Preset voices
+       only — the endpoint takes no style/instruction field, so unlike the
+       other three providers there is no ttsStyleFor() layering here; the
+       voice identity comes entirely from the `voice` id itself. */
+    _openrouterSpeak: function (text, lang, mode) {
+      var tts = Config.section('tts');
+      if (!tts.openrouterApiKey) return Promise.reject(new Error('NO_KEY'));
+      var model = String(tts.openrouterModel || 'openai/gpt-4o-mini-tts').trim() ||
+                  'openai/gpt-4o-mini-tts';
+      var voice = String(tts.openrouterVoice || 'alloy').trim() || 'alloy';
+      var body = {
+        model: model,
+        input: text,
+        voice: voice,
+        response_format: 'mp3'
+      };
+      return requestAudio(localProxy(openrouterTtsUrl(tts.openrouterBaseUrl)), body,
+                           tts.openrouterApiKey, 180000);
     },
 
     listFishVoices: function () {

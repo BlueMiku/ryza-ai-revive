@@ -246,5 +246,23 @@ ok(A._fishLanguage('ja') === 'ja' && A._fishLanguage('zh-tw') === 'zh-TW',
 ok(A._localProxy(A._fishTtsUrl('')).indexOf('/_proxy?u=') === 0,
    'Fish TTS goes through /_proxy on loopback');
 
+/* --- OpenRouter: real TTS API (POST /audio/speech), not chat/completions --- */
+const OR = 'https://openrouter.ai/api/v1';
+ok(A.OPENROUTER_TTS_MODELS.indexOf('openai/gpt-4o-mini-tts') >= 0,
+   'seed includes openai/gpt-4o-mini-tts');
+ok(A._openrouterApiRoot('') === OR, 'empty OpenRouter base → public API root');
+ok(A._openrouterApiRoot('https://openrouter.ai') === OR, 'bare site root → /api/v1');
+ok(A._openrouterApiRoot('https://openrouter.ai/api/v1/') === OR, 'trailing slash stripped');
+ok(A._openrouterApiRoot('https://openrouter.ai/api/v1/audio/speech') === OR,
+   'pasted /audio/speech path stripped to root');
+ok(A._openrouterApiRoot('https://openrouter.ai/api/v1/chat/completions') === OR,
+   'pasted /chat/completions path stripped to root (LLM base reused for TTS)');
+ok(A._openrouterApiRoot('https://proxy.example.com/openrouter') ===
+   'https://proxy.example.com/openrouter', 'custom reverse-proxy root kept');
+ok(A._openrouterTtsUrl('') === OR + '/audio/speech',
+   'TTS path is /audio/speech, not /chat/completions');
+ok(A._localProxy(A._openrouterTtsUrl('')).indexOf('/_proxy?u=') === 0,
+   'OpenRouter TTS goes through /_proxy on loopback');
+
 console.log(failures ? '\nNSFW INTENT: ' + failures + ' FAILURES' : '\nNSFW INTENT: ALL PASS');
 process.exit(failures ? 1 : 0);
